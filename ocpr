@@ -1,0 +1,141 @@
+#!/bin/bash
+
+set -eu
+
+. ~/.ocpr
+API='https://opencast.jira.com/rest/api/2'
+
+trim() {
+  echo "$1" | sed 's/^ *//;s/ *$//'
+}
+
+set_json() {
+  JSON="$(echo "$JSON" |
+    jq --arg key "$2" "$1 = \$key")"
+}
+
+JSON='{
+  "fields": {
+    "project":
+    {
+      "key": "MH"
+    },
+    "issuetype": {
+      "name": "Bug"
+    },
+    "components": [{"name":null}],
+    "versions": [{"name":null}]
+  }
+}'
+
+echo '[2mRequesting form options…[0m'
+fields="$(curl -f -s -u "${USER}:${PASSWORD}" \
+  "${API}/issue/createmeta?projectKeys=MH&issuetypeNames=Bug&expand=projects.issuetypes.fields")"
+
+# summary (required)
+summary=''
+while [ -z "$summary" ]; do
+  read -r -e -p "Summary: " summary
+done
+set_json .fields.summary "$summary"
+
+# assignee (optional)
+read -r -e -p "Assignee: " -i "${USER}" assignee
+if [ -n "$assignee" ]; then
+  set_json .fields.assignee.name "$assignee"
+fi
+
+# components (required)
+echo 'Allowed components:'
+echo -n '[2m'
+echo "$fields" | jq -r '.projects[0].issuetypes[0].fields.components.allowedValues[].name' | sed 's/^/  /'
+echo -n '[0m'
+allowed_components="$(echo "$fields" | jq '.projects[0].issuetypes[0].fields.components.allowedValues[].name')"
+component=''
+while ! (echo "$allowed_components" | grep -q "^\"$component\"$"); do
+  read -r -e -p "Component: " component
+  component="$(trim "$component")"
+done
+set_json '.fields.components[].name' "$component"
+
+# severity (required)
+echo 'Allowed severities:'
+echo -n '[2m'
+echo "$fields" | jq -r '.projects[0].issuetypes[0].fields.customfield_10047.allowedValues[].value' | sed 's/^/  /'
+echo -n '[0m'
+allowed_severity="$(echo "$fields" | jq '.projects[0].issuetypes[0].fields.customfield_10047.allowedValues[].value')"
+severity=''
+while ! (echo "$allowed_severity" | grep -q "^\"$severity\"$"); do
+  read -r -e -p "Severity: " severity
+  severity="$(trim "$severity")"
+done
+set_json '.fields.customfield_10047.value' "$severity"
+
+# version (required)
+echo 'Active versions:'
+version_filter='.projects[0].issuetypes[0].fields.versions.allowedValues[]
+  | select(.released == false and .archived == false)
+  | .name'
+echo -n '[2m'
+echo "$fields" | jq -r "$version_filter" | sed 's/^/  /'
+echo -n '[0m'
+versions="$(echo "$fields" | jq '.projects[0].issuetypes[0].fields.versions.allowedValues[].name')"
+version_suggestion="$(echo "$fields" | jq -r "$version_filter" | tail -n1)"
+version=''
+while ! (echo "$versions" | grep -q "^\"$version\"$"); do
+  read -r -e -p "Version: " -i "$version_suggestion" version
+  version="$(trim "$version")"
+done
+set_json '.fields.versions[].name' "$version"
+
+# setps to reproduce (required)
+tmp="$(mktemp -d)"
+echo "$summary
+
+# Describe the steps to reproduce the issue.
+# The first two lines will be omitted.
+# Lines starting with # will be omitted." > "$tmp/COMMIT_EDITMSG"
+$EDITOR "$tmp/COMMIT_EDITMSG"
+steps_to_reproduce="$(sed '1,2d;/^#/d;s/ *$//' "$tmp/COMMIT_EDITMSG")"
+rm -rf "$tmp"
+set_json '.fields.customfield_10041' "$steps_to_reproduce"
+
+# Create ticket
+ticket="$(curl -s -f -u "${USER}:${PASSWORD}" -X POST --data "$JSON" -H "Content-Type: application/json" \
+  https://opencast.jira.com/rest/api/2/issue/)"
+ticket_no="$(echo "$ticket" | jq -r .key)"
+echo "Created Jira ticket at https://opencast.jira.com/browse/${ticket_no}"
+
+echo '[2mChecking if we have something to commit…[0m'
+if [ -z "$(git diff --name-only --staged)" ]; then
+  echo '[2mNothing is staged. Exiting.[0m'
+  exit
+fi
+
+# create new branch
+branch="t/mh-$(echo "${ticket_no:3} $summary " | sed 's/^\(.\{2,30\}\) .*$/\L\1/;s/[^ [:alnum:]]//g;s/ /-/g')"
+read -r -e -p "Create branch: " -i "$branch" branch
+
+if [ -n "$branch" ]; then
+  echo "[2mCreating branch $branch[0m"
+  git checkout -b "$branch"
+else
+  branch="$(git branch | sed 's/^\* //')"
+fi
+
+# commit
+tmp="$(mktemp -d)"
+echo "$ticket_no, $summary
+
+$steps_to_reproduce" > "$tmp/COMMIT_EDITMSG"
+git commit -F "$tmp/COMMIT_EDITMSG" --edit -S
+rm -rf "$tmp"
+
+remote="$(git remote -v | grep "github.com.*${GH_REPO}.git.*push" | awk '{print $1}')"
+git push "$remote" "$branch"
+
+echo '[2m'
+echo "Use this link to create a pull request:"
+echo '[0m'
+gh_user="$(echo "${GH_REPO}" | cut -d/ -f1)"
+echo "  https://github.com/opencast/opencast/compare/develop...$gh_user:$branch?expand=1"
