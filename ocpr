@@ -112,6 +112,9 @@ if [ -z "$(git diff --name-only --staged)" ]; then
   exit
 fi
 
+# get the current branch
+srcbranch="$(git branch | sed -n 's/^\* //p')"
+
 # create new branch
 branch="t/mh-$(echo "${ticket_no:3} $summary " | sed 's/^\(.\{2,30\}\) .*$/\L\1/;s/[^ [:alnum:]]//g;s/ /-/g')"
 read -r -e -p "Create branch: " -i "$branch" branch
@@ -120,7 +123,7 @@ if [ -n "$branch" ]; then
   echo "[2mCreating branch $branch[0m"
   git checkout -b "$branch"
 else
-  branch="$(git branch | sed 's/^\* //')"
+  branch="$srcbranch"
 fi
 
 # commit
@@ -138,4 +141,4 @@ echo '[2m'
 echo "Use this link to create a pull request:"
 echo '[0m'
 gh_user="$(echo "${GH_REPO}" | cut -d/ -f1)"
-echo "  https://github.com/opencast/opencast/compare/develop...$gh_user:$branch?expand=1"
+echo "  https://github.com/opencast/opencast/compare/$srcbranch...$gh_user:$branch?expand=1"
