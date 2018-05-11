@@ -88,7 +88,7 @@ while ! (echo "$versions" | grep -q "^\"$version\"$"); do
 done
 set_json '.fields.versions[].name' "$version"
 
-# setps to reproduce (required)
+# steps to reproduce (required)
 tmp="$(mktemp -d)"
 echo "$summary
 
