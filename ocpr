@@ -141,4 +141,7 @@ echo '[2m'
 echo "Use this link to create a pull request:"
 echo '[0m'
 gh_user="$(echo "${GH_REPO}" | cut -d/ -f1)"
-echo "  https://github.com/opencast/opencast/compare/$srcbranch...$gh_user:$branch?expand=1"
+ghpr="https://github.com/opencast/opencast/compare/$srcbranch...$gh_user:$branch?expand=1"
+
+echo "  ${ghpr}"
+xdg-open "${ghpr}"
