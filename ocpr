@@ -131,7 +131,7 @@ tmp="$(mktemp -d)"
 echo "$ticket_no, $summary
 
 $steps_to_reproduce" > "$tmp/COMMIT_EDITMSG"
-git commit -F "$tmp/COMMIT_EDITMSG" --edit -S
+git commit -F "$tmp/COMMIT_EDITMSG" --edit
 rm -rf "$tmp"
 
 remote="$(git remote -v | grep "github.com.*${GH_REPO}.git.*push" | awk '{print $1}')"
