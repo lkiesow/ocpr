@@ -28,9 +28,16 @@ JSON='{
   }
 }'
 
+issuetype=Bug
+if [ "${1:-}" = "-t" ]; then
+  issuetype=Task
+fi
+echo "[2mUsing issue type: ${issuetype}[0m"
+set_json .fields.issuetype.name "$issuetype"
+
 echo '[2mRequesting form options…[0m'
 fields="$(curl -f -s -u "${USER}:${PASSWORD}" \
-  "${API}/issue/createmeta?projectKeys=MH&issuetypeNames=Bug&expand=projects.issuetypes.fields")"
+  "${API}/issue/createmeta?projectKeys=MH&issuetypeNames=${issuetype}&expand=projects.issuetypes.fields")"
 
 # summary (required)
 summary=''
@@ -58,18 +65,20 @@ while ! (echo "$allowed_components" | grep -q "^\"$component\"$"); do
 done
 set_json '.fields.components[].name' "$component"
 
-# severity (required)
-echo 'Allowed severities:'
-echo -n '[2m'
-echo "$fields" | jq -r '.projects[0].issuetypes[0].fields.customfield_10047.allowedValues[].value' | sed 's/^/  /'
-echo -n '[0m'
-allowed_severity="$(echo "$fields" | jq '.projects[0].issuetypes[0].fields.customfield_10047.allowedValues[].value')"
-severity=''
-while ! (echo "$allowed_severity" | grep -q "^\"$severity\"$"); do
-  read -r -e -p "Severity: " severity
-  severity="$(trim "$severity")"
-done
-set_json '.fields.customfield_10047.value' "$severity"
+if [ "$issuetype" = "Bug" ]; then
+  # severity (required)
+  echo 'Allowed severities:'
+  echo -n '[2m'
+  echo "$fields" | jq -r '.projects[0].issuetypes[0].fields.customfield_10047.allowedValues[].value' | sed 's/^/  /'
+  echo -n '[0m'
+  allowed_severity="$(echo "$fields" | jq '.projects[0].issuetypes[0].fields.customfield_10047.allowedValues[].value')"
+  severity=''
+  while ! (echo "$allowed_severity" | grep -q "^\"$severity\"$"); do
+    read -r -e -p "Severity: " severity
+    severity="$(trim "$severity")"
+  done
+  set_json '.fields.customfield_10047.value' "$severity"
+fi
 
 # version (required)
 echo 'Active versions:'
@@ -88,7 +97,7 @@ while ! (echo "$versions" | grep -q "^\"$version\"$"); do
 done
 set_json '.fields.versions[].name' "$version"
 
-# steps to reproduce (required)
+# steps to reproduce / description (required)
 tmp="$(mktemp -d)"
 echo "$summary
 
@@ -98,7 +107,11 @@ echo "$summary
 $EDITOR "$tmp/COMMIT_EDITMSG"
 steps_to_reproduce="$(sed '1,2d;/^#/d;s/ *$//' "$tmp/COMMIT_EDITMSG")"
 rm -rf "$tmp"
-set_json '.fields.customfield_10041' "$steps_to_reproduce"
+if [ "$issuetype" = "Bug" ]; then
+  set_json '.fields.customfield_10041' "$steps_to_reproduce"
+else
+  set_json '.fields.description' "$steps_to_reproduce"
+fi
 
 # Create ticket
 ticket="$(curl -s -f -u "${USER}:${PASSWORD}" -X POST --data "$JSON" -H "Content-Type: application/json" \
