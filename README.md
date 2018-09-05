@@ -31,7 +31,7 @@ PASSWORD="$(gopass show -o private/opencast.jira.com)"
 Just call `ocpr` and answer the questions.
 
 ```sh
-% ocpr                                                                                                                                                                 (git)-[master] [148]
+% ocpr
 Using issue type: Bug
 Requesting form options…
 Summary: Something is broken
@@ -65,6 +65,16 @@ message, the branch name and the pull request.
 ### Task vs Bug
 
 By default, `ocpr` will create a Bug-type Jira ticket.
-To create a Task instead, run:
+To create a Task instead, run `ocpr -t`.
 
-    ocpr -t
+```sh
+% ocpr
+Using issue type: Bug
+...
+```
+
+```
+% ocpr -t
+Using issue type: Task
+...
+```
