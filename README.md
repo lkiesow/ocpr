@@ -78,3 +78,13 @@ Using issue type: Bug
 Using issue type: Task
 ...
 ```
+
+## Example
+
+The following recording shows an example of starting with a patch, creating a
+task in Jira, using the data from Jira to commit the patch, push the commit to
+your remote repository and finally opening Github's pull request window in your
+browser to create a pullrequest:
+
+[![asciicast](https://asciinema.org/a/2wBAC6mRSMfiepvp4iGUznGHT.png)
+](https://asciinema.org/a/2wBAC6mRSMfiepvp4iGUznGHT)
