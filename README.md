@@ -6,7 +6,10 @@ A quick Jira ticket and pull request creator for [Opencast
 
 ## Configuration
 
-Create a configuration file `~/.ocpr` to supply your credentials:
+Create a configuration file `~/.ocpr` to supply your username and API token.
+Using your password directly does not work anymore.
+You can create an AIP token four your account at
+[id.atlassian.com/manage/api-tokens](https://id.atlassian.com/manage/api-tokens).
 
 ```bash
 # Jira
