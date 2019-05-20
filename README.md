@@ -6,15 +6,17 @@ A quick Jira ticket and pull request creator for [Opencast
 
 ## Configuration
 
-Create a configuration file `~/.ocpr` to supply your username and API token.
-Using your password directly does not work anymore.
-You can create an AIP token four your account at
-[id.atlassian.com/manage/api-tokens](https://id.atlassian.com/manage/api-tokens).
+Create a configuration file `~/.ocpr` to supply your jira credentials.
+
+> Using your password directly does not work anymore.
+> You can create an AIP token four your account at
+> [id.atlassian.com/manage/api-tokens](https://id.atlassian.com/manage/api-tokens).
 
 ```bash
 # Jira
 USER=jdoe
-PASSWORD=...
+EMAIL=jdoe@example.com
+APIKEY=...
 
 # Github
 GH_REPO=jdoe/opencast
@@ -25,7 +27,7 @@ integrate your password manager if he supports shell commands. For example you
 could use gopass like this:
 
 ```bash
-PASSWORD="$(gopass show -o private/opencast.jira.com)"
+APIKEY="$(gopass show -o private/opencast.jira.com)"
 ```
 
 

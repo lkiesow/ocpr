@@ -36,7 +36,7 @@ echo "[2mUsing issue type: ${issuetype}[0m"
 set_json .fields.issuetype.name "$issuetype"
 
 echo '[2mRequesting form options…[0m'
-fields="$(curl -f -s -u "${USER}:${PASSWORD}" \
+fields="$(curl -f -s -u "${EMAIL}:${APIKEY}" \
   "${API}/issue/createmeta?projectKeys=MH&issuetypeNames=${issuetype}&expand=projects.issuetypes.fields")"
 
 # summary (required)
@@ -114,7 +114,7 @@ else
 fi
 
 # Create ticket
-ticket="$(curl -s -f -u "${USER}:${PASSWORD}" -X POST --data "$JSON" -H "Content-Type: application/json" \
+ticket="$(curl -s -f -u "${EMAIL}:${APIKEY}" -X POST --data "$JSON" -H "Content-Type: application/json" \
   https://opencast.jira.com/rest/api/2/issue/)"
 ticket_no="$(echo "$ticket" | jq -r .key)"
 echo "Created Jira ticket at https://opencast.jira.com/browse/${ticket_no}"
